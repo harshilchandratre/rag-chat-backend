@@ -9,7 +9,6 @@ embedding function 'embedText' that uses hf model
 to converts each chunks[i] into an array of vectors
 */
 export const indexDocument = async (path) => {
-
   // loader splits huge text to array of chunks
   const chunks = await loader(path);
 
@@ -17,11 +16,10 @@ export const indexDocument = async (path) => {
   passing each chunk[i] for embedding...
   */
   for (let i = 0; i < chunks.length; i++) {
-
     /* the embedText function uses hf model to convert
   chunk[i] into floating point numbers  */
     const embedding = await embedText(chunks[i]);
-    console.log("embedded chunk...", embedding)
+    console.log("embedded chunk...", embedding);
 
     // saving the vector array of the chunk[i] to chromadb
     await collection.add({
@@ -53,18 +51,34 @@ export const askQuestions = async (question) => {
   into single array and joins all elements 
   with single string separated by newline...*/
   const context = results.documents.flat().join("\n");
-  console.log("context...", context)
+  console.log("context...", context);
 
   // the LLM prompt
-  const prompt = `Below are the context and question prompt. Act like you did not have any context. But base your response based on it.  
+  const prompt = `
+  
+  Classify the user query into one of:
+  GREETING, GENERAL, DOCUMENT_QUERY, FOLLOW_UP
 
-  Context: ${context}
-  Question: ${question}
+  Query: "${question}"
 
+  Answer based on the category (don't mention the category. Answer normally.) 
+  Skip refering to the context if you think it's not relevant to the user's query. 
+
+  Context: "${context}"
   `;
 
   // passing the prompt to the LLM model
   const response = await model.generateContent(prompt);
-  console.log("the LLM response...", response)
+  console.log("the LLM response...", response);
   return response.response.text();
 };
+
+
+/**
+ * current flaw with this system:
+ * 
+ * the rag currently doesn't hold a memory of the conversation. 
+ * llm looks up the vector context everytime user hits
+ * a new query. it doesn't currently gets the history or a basic 
+ * context of previous conversation.  
+ */
